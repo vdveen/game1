@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 public class VehicleController : MonoBehaviour
@@ -5,54 +7,64 @@ public class VehicleController : MonoBehaviour
     [SerializeField] private float baseSpeed = 8f;
     [SerializeField] private float detectionDistance = 20f;
     [SerializeField] float currentSpeed;
-    private Vector3 startPoint;
-    private Vector3 endPoint; 
     private bool isMoving = true;
     private GameManager gameManager; 
-    private int currentWaypointIndex = 0; 
+    //private int currentWaypointIndex = 0; 
     private Vector3 currentDirection;
+    public Waypoint currentWaypoint;
+    public Waypoint previousWaypoint;
     
     private void Start()
     {
+        baseSpeed = Mathf.Max(6f, baseSpeed);
         baseSpeed += Random.Range(-0.8f, 0.8f);
-        baseSpeed = Mathf.Max(1f, baseSpeed);
         currentSpeed = baseSpeed;
-        startPoint = transform.position;
-        endPoint = transform.position + Vector3.forward * 600f;
+        
+        // Find the GameManager
         gameManager = GameObject.FindAnyObjectByType<GameManager>();
-        //currentWaypointIndex = 0;
-        currentWaypointIndex = Random.Range(0, gameManager.numberOfNodes);
+        if (gameManager != null && gameManager.waypoints.Length > 0)
+        {
+            // Set initial waypoint
+            int randomIndex = Random.Range(0, gameManager.waypoints.Length);
+            currentWaypoint = gameManager.waypoints[randomIndex].GetComponent<Waypoint>();
+            
+            // Choose next waypoint immediately to get moving
+            if (currentWaypoint != null)
+            {
+                previousWaypoint = currentWaypoint;
+                currentWaypoint = ChooseNextWaypoint();
+            }
+        } else
+        {
+            Debug.LogError("GameManager not found or no waypoints available!");
+        }
     }
 
     private void Update()
     {
-        if (!isMoving) return;
-        if (gameManager.waypoints == null || gameManager.waypoints.Length == 0) return;
+        if (!isMoving || gameManager.waypoints == null || gameManager.waypoints.Length == 0 || currentWaypoint == null) return;
 
-        // 1. Identify the current waypoint
-        Transform targetWaypoint = gameManager.waypoints[currentWaypointIndex];
+        // Calculate direction to current waypoint
+        Vector3 direction = (currentWaypoint.transform.position - transform.position).normalized;
 
-        // 2. Calculate the direction from you to the waypoint
-        Vector3 direction = (targetWaypoint.position - transform.position).normalized;
-
-        // 3. Store that direction for gizmos
+        // Store that direction for gizmos
         currentDirection = direction;   
 
-        // 4. Move toward the waypoint
+        // Move toward the waypoint
         float step = currentSpeed * Time.deltaTime;
-        transform.position = Vector3.MoveTowards(transform.position, targetWaypoint.position, step);
+        transform.position = Vector3.MoveTowards(transform.position, currentWaypoint.transform.position, step);
 
-        // 5. Face the waypoint
+        // Face the waypoint
         transform.LookAt(transform.position + direction);
 
-        // 6. Check if close enough to switch to next waypoint
-        if (Vector3.Distance(transform.position, targetWaypoint.position) < 0.2f)
+        // Check if reached waypoint
+        if (Vector3.Distance(transform.position, currentWaypoint.transform.position) < 0.2f)
         {
-            currentWaypointIndex = (currentWaypointIndex + 1) % gameManager.waypoints.Length;
+            ChooseNextWaypoint();
         }
 
-        RaycastHit hit;
-        if (Physics.Raycast(transform.position, direction, out hit, detectionDistance))
+        //RaycastHit hit;
+        if (Physics.Raycast(transform.position, direction, out var hit, detectionDistance))
         {
             if (hit.collider.CompareTag("Vehicle"))
             {
@@ -77,10 +89,11 @@ public class VehicleController : MonoBehaviour
                         else if (hit.distance < 2f)
                         {
                             currentSpeed = 0f;
+                            //isMoving = false;
                         }
                         else
                         {
-                            currentSpeed = Mathf.MoveTowards(currentSpeed, baseSpeed * 0.5f, 1f * Time.deltaTime); 
+                            currentSpeed = Mathf.MoveTowards(currentSpeed, baseSpeed, 1f * Time.deltaTime); 
                         }
                     }
                 } else {
@@ -93,13 +106,25 @@ public class VehicleController : MonoBehaviour
             currentSpeed = Mathf.MoveTowards(currentSpeed, baseSpeed, 1f * Time.deltaTime);
         }
 
-        if (Vector3.Distance(transform.position, endPoint) < 0.1f)
-        {
-            transform.position = startPoint;
-            currentSpeed = baseSpeed;
-        }
-        
     }
+
+    private Waypoint ChooseNextWaypoint()
+        {
+            if (currentWaypoint == null || currentWaypoint.connections.Count == 0)
+                return null;
+
+            // Filter out the previous waypoint to avoid going backwards (unless it's the only option)
+            List<Waypoint> availableConnections = currentWaypoint.connections
+                .Where(w => w != previousWaypoint || currentWaypoint.connections.Count == 1)
+                .ToList();
+
+            if (availableConnections.Count == 0)
+                availableConnections = currentWaypoint.connections; // If no other options, allow backtracking
+
+            // Choose a random connection from available ones
+            int randomIndex = Random.Range(0, availableConnections.Count);
+            return availableConnections[randomIndex];
+        }
 
     private void OnDrawGizmos()
     {
