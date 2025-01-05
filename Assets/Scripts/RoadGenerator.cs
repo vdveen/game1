@@ -7,10 +7,11 @@ public class RoadGenerator : MonoBehaviour
     public Waypoint waypointPrefab;
     public int mainChainLength = 20;
     public int branchLength = 10;
-    public int expansionIterations = 30;
     public float stepDistance = 5f;
     public float maxAngleOffset = 10f;
     public float nearbyNodeRadius = 2.5f;
+    public int expansionIterations = 2000; // Adjust as needed
+    public float spawnDistance = 10f;
     public Transform waypointContainer;
     public List<Waypoint> waypoints = new();
 
@@ -53,8 +54,6 @@ public class RoadGenerator : MonoBehaviour
         GenerateBranch(middleNode, downDirection, 10);
 
         // Step 4: Random expansions
-        int expansionIterations = 1000; // Adjust as needed
-        float spawnDistance = 5f;
 
         for (int i = 0; i < expansionIterations; i++)
         {
@@ -117,7 +116,7 @@ public class RoadGenerator : MonoBehaviour
 
     private Vector3 GetFreeDirection(Waypoint reference)
     {
-        const float minAngleBetweenConnections = 45f;
+        const float minAngleBetweenConnections = 60f;
         
         // Get all current connection angles
         List<float> usedAngles = new List<float>();

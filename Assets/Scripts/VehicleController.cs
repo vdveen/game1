@@ -13,7 +13,11 @@ public class VehicleController : MonoBehaviour
     private Vector3 currentDirection;
     public Waypoint currentWaypoint;
     public Waypoint previousWaypoint;
-    
+    public void SetInitialWaypoint(Waypoint waypoint)
+    {
+        currentWaypoint = waypoint;
+    }
+
     private void Start()
     {
         baseSpeed = Mathf.Max(6f, baseSpeed);
@@ -22,24 +26,19 @@ public class VehicleController : MonoBehaviour
         
         // Find the GameManager
         gameManager = GameObject.FindAnyObjectByType<GameManager>();
-        if (gameManager != null && gameManager.waypoints.Length > 0)
+        
+        // Make sure the current waypoint has connections
+        if (currentWaypoint != null && currentWaypoint.connections.Count > 0)
         {
-            // Set initial waypoint
-            int randomIndex = Random.Range(0, gameManager.waypoints.Length);
-            currentWaypoint = gameManager.waypoints[randomIndex].GetComponent<Waypoint>();
-            
-            // Choose next waypoint immediately to get moving
-            if (currentWaypoint != null)
-            {
-                previousWaypoint = currentWaypoint;
-                currentWaypoint = ChooseNextWaypoint();
-            }
-        } else
+            // Choose a random connection as the next waypoint
+            previousWaypoint = currentWaypoint;
+            currentWaypoint = currentWaypoint.connections[Random.Range(0, currentWaypoint.connections.Count)];
+        }
+        else
         {
-            Debug.LogError("GameManager not found or no waypoints available!");
+            Debug.LogError($"Waypoint {currentWaypoint?.name ?? "null"} has no connections!");
         }
     }
-
     private void Update()
     {
         if (!isMoving || gameManager.waypoints == null || gameManager.waypoints.Length == 0 || currentWaypoint == null) return;
@@ -60,7 +59,16 @@ public class VehicleController : MonoBehaviour
         // Check if reached waypoint
         if (Vector3.Distance(transform.position, currentWaypoint.transform.position) < 0.2f)
         {
-            ChooseNextWaypoint();
+            Waypoint nextWaypoint = ChooseNextWaypoint();
+            if (nextWaypoint == null)
+            {
+                currentWaypoint = null;
+                isMoving = false; // Stop at dead end
+            }
+            else
+            {
+                currentWaypoint = nextWaypoint;
+            }
         }
 
         //RaycastHit hit;
@@ -109,27 +117,37 @@ public class VehicleController : MonoBehaviour
     }
 
     private Waypoint ChooseNextWaypoint()
+    {
+        if (currentWaypoint == null || currentWaypoint.connections.Count == 0)
+            return null;
+
+        // Store the current waypoint before changing it
+        Waypoint oldWaypoint = currentWaypoint;
+
+        // Filter out the previous waypoint to avoid going backwards
+        List<Waypoint> availableConnections = currentWaypoint.connections
+            .Where(w => w != previousWaypoint)
+            .ToList();
+
+        // If there are no valid connections (dead end)
+        if (availableConnections.Count == 0)
         {
-            if (currentWaypoint == null || currentWaypoint.connections.Count == 0)
-                return null;
-
-            // Filter out the previous waypoint to avoid going backwards (unless it's the only option)
-            List<Waypoint> availableConnections = currentWaypoint.connections
-                .Where(w => w != previousWaypoint || currentWaypoint.connections.Count == 1)
-                .ToList();
-
-            if (availableConnections.Count == 0)
-                availableConnections = currentWaypoint.connections; // If no other options, allow backtracking
-
-            // Choose a random connection from available ones
-            int randomIndex = Random.Range(0, availableConnections.Count);
-            return availableConnections[randomIndex];
+            isMoving = false; // Stop the vehicle
+            Debug.Log("Reached dead end");
+            return null;
         }
+
+        // Choose a random connection from available ones
+        int randomIndex = Random.Range(0, availableConnections.Count);
+        previousWaypoint = oldWaypoint;
+        return availableConnections[randomIndex];
+    }
 
     private void OnDrawGizmos()
     {
         Gizmos.color = Color.red;
-        Gizmos.DrawRay(transform.position, currentDirection * detectionDistance);
+        // teken gizmo iets hoger dan wegennetwerk
+        Gizmos.DrawRay(transform.position + Vector3.up * 0.02f, (currentDirection * detectionDistance)+ Vector3.up * 0.02f);
     }
 }
     

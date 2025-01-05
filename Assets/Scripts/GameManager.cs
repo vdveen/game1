@@ -20,7 +20,6 @@ public class GameManager : MonoBehaviour
         }
         SpawnVehicles();
     }
-
     private void SpawnVehicles()
     {
         if (waypoints == null || waypoints.Length == 0)
@@ -33,7 +32,8 @@ public class GameManager : MonoBehaviour
         {
             // Pick a random waypoint for spawning
             int randomWaypointIndex = Random.Range(0, waypoints.Length);
-            Vector3 spawnPosition = waypoints[randomWaypointIndex].position;
+            Transform spawnWaypoint = waypoints[randomWaypointIndex];
+            Vector3 spawnPosition = spawnWaypoint.position;
             
             // Add small random offset to prevent vehicles spawning exactly on top of each other
             spawnPosition += new Vector3(Random.Range(-0.5f, 0.5f), 0f, Random.Range(-0.5f, 0.5f));
@@ -41,6 +41,13 @@ public class GameManager : MonoBehaviour
             // Spawn the vehicle
             GameObject vehicle = Instantiate(vehiclePrefab, spawnPosition, Quaternion.identity);
             vehicle.tag = "Vehicle";
+            
+            // Set the initial waypoint
+            VehicleController controller = vehicle.GetComponent<VehicleController>();
+            if (controller != null)
+            {
+                controller.SetInitialWaypoint(spawnWaypoint.GetComponent<Waypoint>());
+            }
         }
     }
 }
