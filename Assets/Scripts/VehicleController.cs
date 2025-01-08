@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 
 public class VehicleController : MonoBehaviour
@@ -13,6 +14,12 @@ public class VehicleController : MonoBehaviour
     private Vector3 currentDirection;
     public Waypoint currentWaypoint;
     public Waypoint previousWaypoint;
+    public Waypoint startWaypoint;
+    public Waypoint endWaypoint;
+    private RoadNetwork network;
+    public List<Waypoint> waypoints;
+    public Queue<Waypoint> plannedRoute;
+    public List<Node> path;
     public void SetInitialWaypoint(Waypoint waypoint)
     {
         currentWaypoint = waypoint;
@@ -23,9 +30,11 @@ public class VehicleController : MonoBehaviour
         baseSpeed = Mathf.Max(6f, baseSpeed);
         baseSpeed += Random.Range(-0.8f, 0.8f);
         currentSpeed = baseSpeed;
-        
-        // Find the GameManager
+
+        // Find the GameManager and RoadNetwork
         gameManager = GameObject.FindAnyObjectByType<GameManager>();
+        network = GameObject.FindAnyObjectByType<RoadNetwork>();
+
         
         // Make sure the current waypoint has connections
         if (currentWaypoint != null && currentWaypoint.connections.Count > 0)
@@ -38,6 +47,28 @@ public class VehicleController : MonoBehaviour
         {
             Debug.LogError($"Waypoint {currentWaypoint?.name ?? "null"} has no connections!");
         }
+
+        
+        startWaypoint = currentWaypoint; // Store the initial waypoint for pathfinding
+        // Convert Transform array to List<Waypoint>
+        waypoints = new List<Waypoint>();
+        foreach (Transform waypointTransform in gameManager.waypoints)
+        {
+            Waypoint waypoint = waypointTransform.GetComponent<Waypoint>();
+            if (waypoint != null)
+            {
+                waypoints.Add(waypoint);
+            }
+        }
+        endWaypoint = waypoints[Random.Range(0, waypoints.Count)];
+        // Convert to Node
+        Node startNode = network.GetNodeForWaypoint(startWaypoint);
+        Node goalNode = network.GetNodeForWaypoint(endWaypoint);
+
+        List<Node> path = Pathfinding.FindPath(startNode, goalNode);
+
+        // Convert Node path back to Waypoint path
+        plannedRoute = ConvertNodePathToWaypoints(path);
     }
     private void Update()
     {
@@ -141,6 +172,17 @@ public class VehicleController : MonoBehaviour
         int randomIndex = Random.Range(0, availableConnections.Count);
         previousWaypoint = oldWaypoint;
         return availableConnections[randomIndex];
+    }
+
+    private Queue<Waypoint> ConvertNodePathToWaypoints(List<Node> nodePath)
+    {
+        Queue<Waypoint> route = new Queue<Waypoint>();
+        foreach (Node node in nodePath)
+        {
+            Waypoint wp = network.GetWaypointForNode(node); 
+            route.Enqueue(wp);
+        }
+        return route;
     }
 
     private void OnDrawGizmos()

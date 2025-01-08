@@ -1,25 +1,59 @@
 using System.Collections.Generic;
+using System.Collections;
 using System.Linq;
 using UnityEngine;
 
 public class GameManager : MonoBehaviour
 {
-    [SerializeField] private GameObject vehiclePrefab; // Drag your sphere prefab here
+    [SerializeField] private GameObject vehiclePrefab; 
     [SerializeField] private int numberOfVehicles = 40;
     [SerializeField] public Transform[] waypoints;    
     [SerializeField] private RoadGenerator roadGenerator;
+    [SerializeField] private RoadNetwork network; //added
+    public Transform vehicleContainer;
 
     private void Start()
     {
-        // Wait for RoadGenerator to finish generating waypoints
+        StartCoroutine(InitializeGame());
+    }
+
+    private IEnumerator InitializeGame()
+    {
+        // Wait one frame to ensure RoadGenerator's Start has run
+        yield return null;
+
         if (roadGenerator != null)
         {
-            waypoints = roadGenerator.GetComponentsInChildren<Transform>()
-                .Where(t => t.GetComponent<Waypoint>() != null)
-                .ToArray();
+            // Try to get waypoints directly from RoadGenerator's list
+            waypoints = roadGenerator.waypoints.Select(w => w.transform).ToArray();
+
+            // If no waypoints found, try finding them in the container
+            if (waypoints == null || waypoints.Length == 0)
+            {
+                waypoints = roadGenerator.waypointContainer.GetComponentsInChildren<Transform>()
+                    .Where(t => t.GetComponent<Waypoint>() != null)
+                    .ToArray();
+            }
+
+            // Double check we have waypoints
+            if (waypoints == null || waypoints.Length == 0)
+            {
+                Debug.LogError("No waypoints found in RoadGenerator!");
+                yield break;
+            }
+
+            // Then generate the network
+            network.BuildNetworkFromWaypoints(roadGenerator.waypoints); 
+            
+            SpawnVehicles();
         }
-        SpawnVehicles();
+        else
+        {
+            Debug.LogError("RoadGenerator reference not set in GameManager!");
+        }
+
     }
+
     private void SpawnVehicles()
     {
         if (waypoints == null || waypoints.Length == 0)
@@ -27,6 +61,9 @@ public class GameManager : MonoBehaviour
             Debug.LogError("No waypoints available for spawning vehicles!");
             return;
         }
+
+        vehicleContainer = new GameObject("Vehicles").transform;
+        vehicleContainer.SetParent(transform);
 
         for (int i = 0; i < numberOfVehicles; i++)
         {
@@ -39,7 +76,7 @@ public class GameManager : MonoBehaviour
             spawnPosition += new Vector3(Random.Range(-0.5f, 0.5f), 0f, Random.Range(-0.5f, 0.5f));
 
             // Spawn the vehicle
-            GameObject vehicle = Instantiate(vehiclePrefab, spawnPosition, Quaternion.identity);
+            GameObject vehicle = Instantiate(vehiclePrefab, spawnPosition, Quaternion.identity, vehicleContainer);
             vehicle.tag = "Vehicle";
             
             // Set the initial waypoint

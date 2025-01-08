@@ -119,6 +119,50 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
+--- !u!1 &51876242
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 51876244}
+  - component: {fileID: 51876243}
+  m_Layer: 0
+  m_Name: RoadNetwork
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &51876243
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 51876242}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dbc552d53fa7e5c4f8a69d2e991bbf96, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!4 &51876244
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 51876242}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -187.09515, y: -1551.5667, z: 407.65695}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &304943727
 GameObject:
   m_ObjectHideFlags: 0
@@ -149,10 +193,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   vehiclePrefab: {fileID: 774540215072210594, guid: 690684b0483a9f747b320a3776e01e47, type: 3}
-  numberOfVehicles: 40
-  spacingDistance: 1.2
-  numberOfNodes: 25
+  numberOfVehicles: 140
   waypoints: []
+  roadGenerator: {fileID: 1803838887}
+  network: {fileID: 51876243}
+  vehicleContainer: {fileID: 0}
 --- !u!4 &304943729
 Transform:
   m_ObjectHideFlags: 0
@@ -357,7 +402,7 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 50, y: -30, z: 0}
---- !u!1 &1008981682
+--- !u!1 &1803838886
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -365,24 +410,47 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 1008981683}
+  - component: {fileID: 1803838888}
+  - component: {fileID: 1803838887}
   m_Layer: 0
-  m_Name: Waypoint
+  m_Name: RoadGenerator
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &1008981683
+--- !u!114 &1803838887
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1803838886}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 650d2f3a424cd774aa716ff7d85d7dfd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  waypointPrefab: {fileID: 6290773233186685413, guid: 40356229b06d586499cccfcbf7af8367, type: 3}
+  mainChainLength: 20
+  branchLength: 10
+  stepDistance: 5
+  maxAngleOffset: 10
+  nearbyNodeRadius: 2.5
+  expansionIterations: 2000
+  spawnDistance: 10
+  waypointContainer: {fileID: 0}
+  waypoints: []
+--- !u!4 &1803838888
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1008981682}
+  m_GameObject: {fileID: 1803838886}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 1, y: 0, z: 1}
+  m_LocalPosition: {x: -27.400602, y: -298.0924, z: 551.68823}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -395,4 +463,5 @@ SceneRoots:
   - {fileID: 373351536}
   - {fileID: 445813269}
   - {fileID: 304943729}
-  - {fileID: 1008981683}
+  - {fileID: 1803838888}
+  - {fileID: 51876244}
