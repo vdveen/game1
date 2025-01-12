@@ -6,11 +6,12 @@ using UnityEngine;
 public class GameManager : MonoBehaviour
 {
     [SerializeField] private GameObject vehiclePrefab; 
-    [SerializeField] private int numberOfVehicles = 40;
+    [SerializeField] private int numberOfVehicles = 2;
     [SerializeField] public Transform[] waypoints;    
     [SerializeField] private RoadGenerator roadGenerator;
-    [SerializeField] private RoadNetwork network; //added
+    [SerializeField] private RoadNetwork network; 
     public Transform vehicleContainer;
+    public List<Node> vehiclePath;
 
     private void Start()
     {
@@ -79,11 +80,32 @@ public class GameManager : MonoBehaviour
             GameObject vehicle = Instantiate(vehiclePrefab, spawnPosition, Quaternion.identity, vehicleContainer);
             vehicle.tag = "Vehicle";
             
-            // Set the initial waypoint
+            // Set the initial route and waypoints
             VehicleController controller = vehicle.GetComponent<VehicleController>();
+
             if (controller != null)
+            { 
+                // Get start and end nodes
+                Waypoint spawnPoint = spawnWaypoint.GetComponent<Waypoint>();
+                Node startNode = network.GetNodeForWaypoint(spawnPoint);
+                Node goalNode = network.GetNodeForWaypoint(waypoints[Random.Range(0, waypoints.Length)].GetComponent<Waypoint>());
+
+                // Generate path
+                List<Node> vehiclePath = Pathfinding.FindPath(startNode, goalNode);
+                
+                // Get the end waypoint from the goal node
+                Waypoint endWaypoint = network.GetWaypointForNode(goalNode);
+
+                // Set initial waypoints and path in the vehicle controller
+                controller.SetInitialWaypoints(spawnPoint, endWaypoint, vehiclePath);
+            }
+            if (vehiclePath == null || vehiclePath.Count == 0)
             {
-                controller.SetInitialWaypoint(spawnWaypoint.GetComponent<Waypoint>());
+                Debug.LogWarning("Path is empty or null for vehicle: " + vehicle.name);
+            }
+            else
+            {
+                Debug.Log($"Path found with {vehiclePath.Count} nodes for vehicle: " + vehicle.name);
             }
         }
     }

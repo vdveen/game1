@@ -193,7 +193,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   vehiclePrefab: {fileID: 774540215072210594, guid: 690684b0483a9f747b320a3776e01e47, type: 3}
-  numberOfVehicles: 140
+  numberOfVehicles: 150
   waypoints: []
   roadGenerator: {fileID: 1803838887}
   network: {fileID: 51876243}

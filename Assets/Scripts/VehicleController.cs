@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System.Linq;
-using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 
 public class VehicleController : MonoBehaviour
@@ -9,76 +8,63 @@ public class VehicleController : MonoBehaviour
     [SerializeField] private float detectionDistance = 20f;
     [SerializeField] float currentSpeed;
     private bool isMoving = true;
-    private GameManager gameManager; 
-    //private int currentWaypointIndex = 0; 
+    private GameManager gameManager;
     private Vector3 currentDirection;
+    private RoadNetwork network;
+
     public Waypoint currentWaypoint;
     public Waypoint previousWaypoint;
-    public Waypoint startWaypoint;
     public Waypoint endWaypoint;
-    private RoadNetwork network;
-    public List<Waypoint> waypoints;
     public Queue<Waypoint> plannedRoute;
-    public List<Node> path;
-    public void SetInitialWaypoint(Waypoint waypoint)
-    {
-        currentWaypoint = waypoint;
-    }
+    public List<Node> vehiclePath;
+    public List<Waypoint> plannedRouteDebug;
 
-    private void Start()
+    public void SetInitialWaypoints(Waypoint spawnPoint, Waypoint endWaypoint, List<Node> pathToFollow)
     {
+        // Find required components
+        gameManager = GameObject.FindAnyObjectByType<GameManager>();
+        network = GameObject.FindAnyObjectByType<RoadNetwork>();
+
+        // Set speed
         baseSpeed = Mathf.Max(6f, baseSpeed);
         baseSpeed += Random.Range(-0.8f, 0.8f);
         currentSpeed = baseSpeed;
 
-        // Find the GameManager and RoadNetwork
-        gameManager = GameObject.FindAnyObjectByType<GameManager>();
-        network = GameObject.FindAnyObjectByType<RoadNetwork>();
+        // Set waypoints
+        previousWaypoint = spawnPoint;
+        this.endWaypoint = endWaypoint;
 
-        
-        // Make sure the current waypoint has connections
-        if (currentWaypoint != null && currentWaypoint.connections.Count > 0)
+        // Store the path
+        vehiclePath = pathToFollow;
+        Debug.Log($"VehicleController.SetInitialWaypoints: path count = {vehiclePath?.Count ?? 0}");
+
+        // Convert the path to planned route
+        //Queue<Waypoint> plannedRoute = new Queue<Waypoint>();
+        plannedRoute = ConvertNodePathToWaypoints(vehiclePath);
+        if (plannedRoute != null)
         {
-            // Choose a random connection as the next waypoint
-            previousWaypoint = currentWaypoint;
-            currentWaypoint = currentWaypoint.connections[Random.Range(0, currentWaypoint.connections.Count)];
+            currentWaypoint = plannedRoute.Dequeue();
         }
-        else
+        Debug.Log($"ConvertNodePathToWaypoints route = {currentWaypoint}");
+
+        // Set up initial movement
+        if (currentWaypoint == null || currentWaypoint.connections.Count > 0)
         {
             Debug.LogError($"Waypoint {currentWaypoint?.name ?? "null"} has no connections!");
         }
-
-        
-        startWaypoint = currentWaypoint; // Store the initial waypoint for pathfinding
-        // Convert Transform array to List<Waypoint>
-        waypoints = new List<Waypoint>();
-        foreach (Transform waypointTransform in gameManager.waypoints)
-        {
-            Waypoint waypoint = waypointTransform.GetComponent<Waypoint>();
-            if (waypoint != null)
-            {
-                waypoints.Add(waypoint);
-            }
-        }
-        endWaypoint = waypoints[Random.Range(0, waypoints.Count)];
-        // Convert to Node
-        Node startNode = network.GetNodeForWaypoint(startWaypoint);
-        Node goalNode = network.GetNodeForWaypoint(endWaypoint);
-
-        List<Node> path = Pathfinding.FindPath(startNode, goalNode);
-
-        // Convert Node path back to Waypoint path
-        plannedRoute = ConvertNodePathToWaypoints(path);
     }
+
     private void Update()
     {
         if (!isMoving || gameManager.waypoints == null || gameManager.waypoints.Length == 0 || currentWaypoint == null) return;
+
+        plannedRouteDebug = plannedRoute.ToList();
 
         // Calculate direction to current waypoint
         Vector3 direction = (currentWaypoint.transform.position - transform.position).normalized;
 
         // Store that direction for gizmos
-        currentDirection = direction;   
+        currentDirection = direction;
 
         // Move toward the waypoint
         float step = currentSpeed * Time.deltaTime;
@@ -90,16 +76,8 @@ public class VehicleController : MonoBehaviour
         // Check if reached waypoint
         if (Vector3.Distance(transform.position, currentWaypoint.transform.position) < 0.2f)
         {
-            Waypoint nextWaypoint = ChooseNextWaypoint();
-            if (nextWaypoint == null)
-            {
-                currentWaypoint = null;
-                isMoving = false; // Stop at dead end
-            }
-            else
-            {
-                currentWaypoint = nextWaypoint;
-            }
+            currentWaypoint = ChooseNextWaypoint();
+            isMoving = currentWaypoint != null;
         }
 
         //RaycastHit hit;
@@ -115,8 +93,10 @@ public class VehicleController : MonoBehaviour
                     float angleToOther = Vector3.Angle(direction, -otherVehicle.currentDirection);
                     if (angleToOther < 20f)
                     {
-                    currentSpeed = baseSpeed; //aka do nothing
-                    } else {                    
+                        currentSpeed = baseSpeed; //aka do nothing
+                    }
+                    else
+                    {
                         if (hit.distance < 6f)
                         {
                             currentSpeed = 2f;
@@ -132,11 +112,13 @@ public class VehicleController : MonoBehaviour
                         }
                         else
                         {
-                            currentSpeed = Mathf.MoveTowards(currentSpeed, baseSpeed, 1f * Time.deltaTime); 
+                            currentSpeed = Mathf.MoveTowards(currentSpeed, baseSpeed, 1f * Time.deltaTime);
                         }
                     }
-                } else {
-                    currentSpeed = baseSpeed; 
+                }
+                else
+                {
+                    currentSpeed = baseSpeed;
                 }
             }
         }
@@ -152,44 +134,46 @@ public class VehicleController : MonoBehaviour
         if (currentWaypoint == null || currentWaypoint.connections.Count == 0)
             return null;
 
-        // Store the current waypoint before changing it
-        Waypoint oldWaypoint = currentWaypoint;
 
-        // Filter out the previous waypoint to avoid going backwards
-        List<Waypoint> availableConnections = currentWaypoint.connections
-            .Where(w => w != previousWaypoint)
-            .ToList();
 
-        // If there are no valid connections (dead end)
-        if (availableConnections.Count == 0)
+
+        if (plannedRoute != null && plannedRoute.Count > 0)
+        {
+            return plannedRoute.Dequeue();
+        }
+        else
         {
             isMoving = false; // Stop the vehicle
-            Debug.Log("Reached dead end");
+            Debug.Log("Reached goal");
             return null;
         }
-
-        // Choose a random connection from available ones
-        int randomIndex = Random.Range(0, availableConnections.Count);
-        previousWaypoint = oldWaypoint;
-        return availableConnections[randomIndex];
     }
 
-    private Queue<Waypoint> ConvertNodePathToWaypoints(List<Node> nodePath)
+
+    private Queue<Waypoint> ConvertNodePathToWaypoints(List<Node> vehiclePath)
     {
-        Queue<Waypoint> route = new Queue<Waypoint>();
-        foreach (Node node in nodePath)
+        Queue<Waypoint> waypointQueue = new Queue<Waypoint>();
+        if (vehiclePath == null) return waypointQueue;
+
+        // Grab your RoadNetwork reference
+        RoadNetwork network = GameObject.FindAnyObjectByType<RoadNetwork>();
+
+        foreach (Node node in vehiclePath)
         {
-            Waypoint wp = network.GetWaypointForNode(node); 
-            route.Enqueue(wp);
+            Waypoint w = network.GetWaypointForNode(node);
+            if (w != null)
+            {
+                waypointQueue.Enqueue(w);
+            }
         }
-        return route;
+        return waypointQueue;
     }
 
     private void OnDrawGizmos()
     {
         Gizmos.color = Color.red;
         // teken gizmo iets hoger dan wegennetwerk
-        Gizmos.DrawRay(transform.position + Vector3.up * 0.02f, (currentDirection * detectionDistance)+ Vector3.up * 0.02f);
+        Gizmos.DrawRay(transform.position + Vector3.up * 0.02f, (currentDirection * detectionDistance) + Vector3.up * 0.02f);
     }
 }
-    
+
