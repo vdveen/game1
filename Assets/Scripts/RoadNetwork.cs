@@ -21,14 +21,17 @@ public class Edge
     public float weight = 1f;   // Could be distance, time, or some other cost
 }
 
+
 public class RoadNetwork : MonoBehaviour
 {
     public List<Node> nodes = new List<Node>();
     private Dictionary<Waypoint, Node> waypointNodeMap;
     private Dictionary<Node, Waypoint> nodeWaypointMap;
+    [SerializeField] private GameObject roadSegmentPrefab;
+    public Transform roadsegContainer;
 
     public void BuildNetworkFromWaypoints(List<Waypoint> waypoints)
-    
+
     {
         // Create a lookup from Waypoint to Node
         waypointNodeMap = new Dictionary<Waypoint, Node>();
@@ -37,13 +40,14 @@ public class RoadNetwork : MonoBehaviour
         // First pass: create nodes
         foreach (var wp in waypoints)
         {
-            Node node = new Node {position = wp.transform.position};
+            Node node = new Node { position = wp.transform.position };
             waypointNodeMap[wp] = node;
             nodeWaypointMap[node] = wp;
             nodes.Add(node);
         }
 
         // Second pass: create edges
+        roadsegContainer = new GameObject("Road Segments").transform;
         foreach (var wp in waypoints)
         {
             Node node = waypointNodeMap[wp];
@@ -68,8 +72,34 @@ public class RoadNetwork : MonoBehaviour
                     weight = edge.weight,
                 };
                 connectedNode.edges.Add(oppositeEdge);
+
+                if (wp == null)
+                {
+                    Debug.LogWarning("wp is null");
+                    continue;
+                }
+
+                if (!waypointNodeMap.ContainsKey(wp))
+                {
+                    Debug.LogWarning($"waypointNodeMap doesn't contain {wp.name}");
+                    continue;
+                }
+
+                if (roadSegmentPrefab != null)
+                {
+                    GameObject segmentGO = Instantiate(roadSegmentPrefab);
+                    RoadSegment roadSegment = segmentGO.GetComponent<RoadSegment>();
+                    // Position, rotate, and scale the segment
+                    roadSegment.SetDimensions(node.position, connectedNode.position);
+                    segmentGO.transform.SetParent(roadsegContainer);
+                }
+                else
+                {
+                    Debug.LogWarning("No roadSegmentPrefab is assigned in RoadNetwork.");
+                }
             }
         }
+
     }
     public Node GetNodeForWaypoint(Waypoint wp)
     {

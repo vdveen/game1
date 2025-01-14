@@ -148,6 +148,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: dbc552d53fa7e5c4f8a69d2e991bbf96, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  roadSegmentPrefab: {fileID: 926100442573571426, guid: 7b5e054f40b2d59459eb2c31683f91ff, type: 3}
+  roadsegContainer: {fileID: 0}
 --- !u!4 &51876244
 Transform:
   m_ObjectHideFlags: 0
@@ -437,7 +439,7 @@ MonoBehaviour:
   stepDistance: 5
   maxAngleOffset: 10
   nearbyNodeRadius: 2.5
-  expansionIterations: 2000
+  expansionIterations: 1000
   spawnDistance: 10
   waypointContainer: {fileID: 0}
   waypoints: []
