@@ -47,11 +47,6 @@ public class VehicleController : MonoBehaviour
         }
         Debug.Log($"ConvertNodePathToWaypoints route = {currentWaypoint}");
 
-        // Set up initial movement
-        if (currentWaypoint == null || currentWaypoint.connections.Count > 0)
-        {
-            Debug.LogError($"Waypoint {currentWaypoint?.name ?? "null"} has no connections!");
-        }
     }
 
     private void Update()
@@ -63,18 +58,24 @@ public class VehicleController : MonoBehaviour
         // Calculate direction to current waypoint
         Vector3 direction = (currentWaypoint.transform.position - transform.position).normalized;
 
+        //Offset the current point
+        float rightOffset = 0.55f;
+        Vector3 rightDir = Vector3.Cross(Vector3.up, direction).normalized;
+        Vector3 targetPosition = currentWaypoint.transform.position + (rightDir * rightOffset);
+
         // Store that direction for gizmos
+        direction = (currentWaypoint.transform.position - transform.position).normalized;
         currentDirection = direction;
 
         // Move toward the waypoint
         float step = currentSpeed * Time.deltaTime;
-        transform.position = Vector3.MoveTowards(transform.position, currentWaypoint.transform.position, step);
+        transform.position = Vector3.MoveTowards(transform.position, targetPosition, step);
 
         // Face the waypoint
         transform.LookAt(transform.position + direction);
 
         // Check if reached waypoint
-        if (Vector3.Distance(transform.position, currentWaypoint.transform.position) < 0.2f)
+        if (Vector3.Distance(transform.position, currentWaypoint.transform.position) < 0.6f)
         {
             currentWaypoint = ChooseNextWaypoint();
             isMoving = currentWaypoint != null;

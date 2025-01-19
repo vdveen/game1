@@ -3,7 +3,7 @@ using UnityEngine;
 
 public class RoadSegment : MonoBehaviour
 {
-    public float width = 8f;
+    public float width = 10f;
     public float thickness = 0.2f;
 
     public void SetDimensions(Vector3 startPos, Vector3 endPos)
@@ -12,7 +12,8 @@ public class RoadSegment : MonoBehaviour
         transform.localScale = new Vector3(width, thickness, length);
 
         // Position at midpoint
-        transform.position = (startPos + endPos) / 2f;
+        float verticalOffset = 0.6f; // Adjust this value to lower/raise the road
+        transform.position = (startPos + endPos) / 2f - (Vector3.up * verticalOffset);
 
         // Rotate to align with direction
         transform.rotation = Quaternion.LookRotation(endPos - startPos);
